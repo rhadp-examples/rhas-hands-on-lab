@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: antora-viewer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: web
+    spec:
+      # Locally the repo is bind-mounted into /antora. Here an init container
+      # clones it into a shared emptyDir instead. Antora needs a real git
+      # checkout, because the playbook's content source is `url: .`.
+      initContainers:
+        - name: git-clone
+          image: ghcr.io/juliaaano/antora-viewer:latest
+          command:
+            - /bin/sh
+            - -c
+            - git clone --depth 1 --branch "$GIT_REF" "$GIT_REPO" /antora
+          envFrom:
+            - configMapRef:
+                name: antora-viewer
+          env:
+            - name: HOME
+              value: /tmp
+          volumeMounts:
+            - name: site
+              mountPath: /antora
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+      containers:
+        - name: antora-viewer
+          image: ghcr.io/juliaaano/antora-viewer:latest
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: HOME
+              value: /tmp
+          volumeMounts:
+            - name: site
+              mountPath: /antora
+          # The site is served once the first Antora build has written it.
+          readinessProbe:
+            httpGet:
+              path: /index.html
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 60
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: site
+          emptyDir: {}
