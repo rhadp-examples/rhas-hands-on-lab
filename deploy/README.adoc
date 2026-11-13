@@ -1,0 +1,53 @@
+= Deploying the lab guide on OpenShift
+
+These manifests run the same `ghcr.io/juliaaano/antora-viewer` image as the local
+`podman run` command. The difference is how the content gets into `/antora`:
+
+* Locally, `$PWD` is bind-mounted into the container.
+* On OpenShift, an init container clones the git repository into a shared
+  `emptyDir`. The viewer then builds that checkout with Antora and serves it on
+  port 8080. A Route exposes it over HTTPS.
+
+The site is built from what is pushed to the repository, not from your local
+working tree.
+
+== Deploy
+
+[source,sh]
+----
+oc new-project rhas-hands-on-lab   # or: oc project <existing-project>
+oc apply -k deploy/
+oc rollout status deployment/antora-viewer
+oc get route antora-viewer -o jsonpath='https://{.spec.host}{"\n"}'
+----
+
+The first Antora build downloads the UI bundle, so the cluster needs outbound
+access to `github.com`. The pod only reports ready once that build has finished.
+
+== Configure
+
+Set the repository and branch in `configmap.yaml` (`GIT_REPO`, `GIT_REF`), or
+change them on the cluster:
+
+[source,sh]
+----
+oc patch configmap antora-viewer -p '{"data":{"GIT_REF":"my-branch"}}'
+oc rollout restart deployment/antora-viewer
+----
+
+== Update the content
+
+Push your changes, then restart the deployment. The new pod clones the latest
+commit:
+
+[source,sh]
+----
+oc rollout restart deployment/antora-viewer
+----
+
+== Remove
+
+[source,sh]
+----
+oc delete -k deploy/
+----
