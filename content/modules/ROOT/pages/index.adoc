@@ -1,10 +1,7 @@
 = Introduction to the Lab
 
-The move to software-defined vehicles (SDVs) in the automotive industry presents challenges in developing software for electronic control units (ECUs) that
-require hardware-in-the-loop (HIL) testing.
-
-This lab shows you how a "Software Factory" approach supports the development of automotive software. It uses the
-*Red Hat Automotive Suite* (RHAS), an integrated development environment on Red Hat OpenShift for developing, testing,
+This lab shows you how a "Software Factory" approach supports automotive software development for software-defined
+vehicles. It uses the *Red Hat Automotive Suite* (RHAS), an integrated development environment on Red Hat OpenShift for developing, testing,
 and deploying applications for the
 https://www.redhat.com/en/blog/new-standard-red-hat-vehicle-operating-system-modern-and-future-vehicles[Red Hat In-Vehicle OS,window=_blank]
 (RHIVOS).
@@ -39,8 +36,6 @@ platform in action.
   through the build pipeline, and the same image on a physical ARM board.
 
 Sections marked *Bonus* are optional. Skip them if you are short on time, and come back to them later.
-
-At the end of this lab, you will have a basic understanding of the Red Hat Automotive Suite and how it helps you develop, build, and test automotive software.
 
 == Next
 

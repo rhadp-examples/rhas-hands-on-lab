@@ -30,14 +30,15 @@ https://devspaces.{openshift_cluster_ingress_domain}
 https://console-openshift-console.{openshift_cluster_ingress_domain}
 ----
 
-=== Lab repository
+=== Your lab repository
 
 Needed if your Dev Spaces dashboard shows no workspace yet, or if you have to recreate it: paste it under
-*Create Workspace* -> *Import from Git* and click *Create & Open*.
+*Create Workspace* -> *Import from Git*, *replace `NN` with the two-digit number of your lab user* (for example `workshop-user07`), and click
+*Create & Open*.
 
-[source,sh,role=execute,subs=attributes+]
+[source,sh,role=copypaste,subs=attributes+]
 ----
-{lab_repo_url}
+{lab_user_repo_url}
 ----
 
 == Environment checks
@@ -182,7 +183,14 @@ getenforce
 podman exec -it qm podman exec -it systemd-radio radio-client
 ----
 
-Volume: *+* / *-*, next station: *SPACE*, radio on/off: *ESC*, quit: *Q*.
+Volume: *+* / *-*, next station: *SPACE*, radio on/off: *ESC*, interference monitor on/off: *M*, quit: *Q*.
+
+=== List the container images of the root partition
+
+[source,sh,role=execute]
+----
+podman images
+----
 
 === List the containers of the QM partition
 
@@ -205,21 +213,26 @@ podman exec qm ps axl
 podman exec -it qm radio-client
 ----
 
-Press *Ctrl+C* if it does not return by itself.
+Quit with *Q*, or press *Ctrl+C* if it does not return by itself.
 
 === Put the QM partition under CPU load, watch, and stop it
+
+Set up the two tmux panes first, see <<tmux-script>>. Open the interference monitor with *M* in the radio client, then
+start the load:
 
 [source,sh,role=execute]
 ----
 podman exec qm systemctl start sysbench
 ----
 
+Optional, to see the CPU usage from the operating system's side (quit with *q*):
+
 [source,sh,role=execute]
 ----
 top
 ----
 
-Press *q* to quit `top`.
+Stop the load:
 
 [source,sh,role=execute]
 ----
@@ -246,7 +259,7 @@ Leave it again with `exit`.
 === tmux: split the serial console
 
 `tmux` is installed on the device. It splits the serial console into several panes, so that you can watch several
-things side by side, for example the radio client and `top`. Start it on the device:
+things side by side, for example the radio client and a command prompt. Start it on the device:
 
 [source,sh,role=execute]
 ----
@@ -308,13 +321,33 @@ tmux set -g mouse off
 // TODO(dry run): check how text selection works with tmux mouse mode in the Dev Spaces browser
 // terminal (Shift+drag on Linux/Windows; on macOS possibly Option+drag).
 
+[#tmux-script]
 ==== Layout for the CPU load step
 
-. Press *Ctrl+B*, then *"*. You are in the lower pane.
-. Press *Ctrl+B*, then the *Up arrow* key, and start the radio client in the upper pane:
-+
+Paste this script into the serial console. It starts the radio client in the upper pane and leaves you in the lower
+pane, with the command that starts the load shown as a comment:
+
+[source,sh,role=copypaste]
+----
+SESSION=autosd-demo
+tmux new-session -d -s $SESSION -n "Autosd Demo"
+tmux split-window -v -t $SESSION:0
+tmux send-keys -t $SESSION:0.0 "podman exec -it qm podman exec -it systemd-radio radio-client" C-m
+tmux send-keys -t $SESSION:0.1 "# podman exec qm systemctl start sysbench" C-m
+tmux select-pane -t $SESSION:0.1
+tmux attach-session -t $SESSION
+----
+
+Close the whole session, including the radio client, from any pane:
+
 [source,sh,role=execute]
 ----
-podman exec -it qm podman exec -it systemd-radio radio-client
+tmux kill-session -t autosd-demo
 ----
-. Press *Ctrl+B*, then the *Down arrow* key. Use the lower pane for `top` and the `sysbench` commands.
+
+If you detached with *Ctrl+B*, then *d*, get the session back with:
+
+[source,sh,role=execute]
+----
+tmux attach-session -t autosd-demo
+----
